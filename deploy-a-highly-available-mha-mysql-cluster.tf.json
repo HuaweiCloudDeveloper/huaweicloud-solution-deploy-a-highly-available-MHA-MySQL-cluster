@@ -1,0 +1,366 @@
+{
+    "terraform": {
+        "required_providers": [
+            {
+                "huaweicloud": {
+                    "source": "huawei.com/provider/huaweicloud",
+                    "version": ">=1.44.0"
+                }
+            }
+        ]
+    },
+    "provider": {
+        "huaweicloud": {
+            "cloud": "myhuaweicloud.com",
+            "endpoints": {
+                "iam": "iam.ap-southeast-3.myhuaweicloud.com",
+                "dns": "dns.ap-southeast-3.myhuaweicloud.com",
+				"bss": "bss.myhuaweicloud.com"
+            },
+            "insecure": true,
+            "region": "ap-southeast-3",
+            "auth_url": "https://iam.ap-southeast-3.myhuaweicloud.com/v3"
+        }
+    },
+    "variable": {
+        "vpc_name": {
+            "default": "highly-available-mha-mysql-cluster-demo",
+            "description": "Virtual Private Cloud (VPC) name. This template uses a newly created VPC and the VPC name must be unique. Value range: 1 to 54 characters, including letters, digits, underscores (_), hyphens (-), and periods (.). Default value: highly-available-mha-mysql-cluster-demo ",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[\\\\w\\\\.-]{1,54}$\",var.vpc_name))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "security_group_name": {
+            "default": "highly-available-mha-mysql-cluster-demo",
+            "description": "Security group name. This template uses a newly created security group. For details about how to set security group rules, see the deployment guide. Value range: 1 to 64 characters, including letters, digits, underscores (_), hyphens (-), and periods (.). Default value: highly-available-mha-mysql-cluster-demo ",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[\\\\w\\\\.-]{1,64}$\",var.security_group_name))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "bandwidth_size": {
+            "default": 5,
+            "description": "EIP bandwidth. This template uses a pay-per-use EIP billed by bandwidth in Mbit/s. Value range: 1 to 2,000. Default value: 5 ",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]|[1-9]\\\\d{1,2}|1\\\\d{3}|2000)$\",var.bandwidth_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "ecs_name": {
+            "default": "highly-available-mha-mysql-cluster-demo",
+            "description": "Elastic Cloud Server (ECS) name, which must be unique. Value range: 1 to 57 characters, including lowercase letters, digits, underscores (_), and hyphens (-). Default value: highly-available-MHA-MySQL-cluster-demo ",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[a-z\\\\d\\\\_-]{1,57}$\",var.ecs_name))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "ecs_flavor": {
+            "default": "c6.large.2",
+            "description": "ECS flavor. For more flavors, see the deployment guide. Default value: c6.large.2 (2vCPU|4GiB) ",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([a-z][a-z0-9]{0,3}\\\\.)(small\\\\.|medium\\\\.|(x||[1-9][0-9]{0,1}x)large\\\\.)[1-9][0-9]{0,1}$\",var.ecs_flavor))>0}",
+                "error_message": "Invalid input. Please re-enter."
+            }
+        },
+        "ecs_password": {
+            "default": "",
+            "description": "ECS initial password. After an ECS is created, reset the password by following the instructions provided in the deployment guide. The value consists of 8 to 26 characters. It includes at least three of the following character types: uppercase letters, lowercase letters, digits, and special characters (@%-_=+[]:./^,{}?), and cannot contain the username or the username spelled backwards. The default administrator account is root. ",
+            "type": "string",
+            "nullable": false,
+            "sensitive": true
+        },
+        "system_disk_size": {
+            "default": 40,
+            "description": "ECS system disk size. The default disk type is high I/O and the ECS disk space cannot be scaled down. Value range: 40 GB to 1,024 GB. The default value is 40 GB. ",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([4-9]\\\\d|[1-9]\\\\d{2}|10[0-1][0-9]|102[0-4])$\",var.system_disk_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "data_disk_size": {
+            "default": 100,
+            "description": "ECS data disk size. The default disk type is general-purpose SSD. Value range: 10 GB to 32,768 GB. The default value is 100 GB. ",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^([1-9]\\\\d{1,3}|[1-2]\\\\d{4}|3[0-1]\\\\d{3}|32[0-6]\\\\d{2}|327[0-5]\\\\d|3276[0-8])$\",var.data_disk_size))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "sender_email_address": {
+            "default": "",
+            "description": "Sender's email address, which sends alarm emails to inform users of a MySQL database failover through MHA. Example: mha@huawei.com. ",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^\\\\w+([-+.]\\\\w+)*@\\\\w+([-.]\\\\w+)*\\\\.\\\\w+([-.]\\\\w+)*$\",var.sender_email_address))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "smtp_server_address": {
+            "default": "",
+            "description": "SMTP server address of the sender's mailbox. For example, the SMTP address of Outlook is smtp.office365.com. SMTP may be disabled for some mailboxes by default and needs to be enabled before you send emails over SMTP.",
+            "type": "string",
+            "nullable": false
+        },
+        "recipient_email_address": {
+            "default": "",
+            "description": "Recipient's email address, which receives alarm emails. Example: recipient@huawei.com. ",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^\\\\w+([-+.]\\\\w+)*@\\\\w+([-.]\\\\w+)*\\\\.\\\\w+([-.]\\\\w+)*$\",var.recipient_email_address))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "email_authorization_code": {
+            "default": "",
+            "description": "Email account authorization code, which is used to authenticate operations for sending emails using the sender's email account through MHA. For details about how to obtain the authorization code, see the deployment guide. ",
+            "type": "string",
+            "nullable": false,
+            "sensitive": true
+        },
+        "charge_mode": {
+            "default": "postPaid",
+            "description": "Billing mode. The value can be postPaid (pay-per-use) or prePaid (yearly/monthly). The default value is postPaid. By default, an order is automatically paid from the account balance. ",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"postPaid\",\"prePaid\"], var.charge_mode)}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "charge_period_unit": {
+            "default": "month",
+            "description": "Subscription period unit. This parameter is valid only when charge_mode is set to prePaid (yearly/monthly). The value can be month or year. Default value: month ",
+            "type": "string",
+            "nullable": false,
+            "validation": {
+                "condition": "${contains([\"month\",\"year\"], var.charge_period_unit)}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        },
+        "charge_period": {
+            "default": 1,
+            "description": "Subscription period unit. This parameter is valid only when charge_mode is set to prePaid (yearly/monthly). When charge_period_unit is set to month, the value ranges from 1 to 9. When charge_period_unit is set to year, the value ranges from 1 to 3. The default subscription period is one month. ",
+            "type": "number",
+            "nullable": false,
+            "validation": {
+                "condition": "${length(regexall(\"^[1-9]$\",var.charge_period))>0}",
+                "error_message": "Invalid input, please re-enter."
+            }
+        }
+    },
+    "data": {
+        "huaweicloud_availability_zones": {
+            "availability_zones": {}
+        },
+        "huaweicloud_images_image": {
+            "centos": {
+                "name": "CentOS 7.6 64bit",
+                "visibility": "public",
+                "most_recent": true
+            }
+        }
+    },
+    "resource": {
+        "huaweicloud_vpc": {
+            "vpc": {
+                "name": "${var.vpc_name}",
+                "cidr": "192.168.0.0/16"
+            }
+        },
+        "huaweicloud_vpc_subnet": {
+            "subnet": {
+                "availability_zone": "${data.huaweicloud_availability_zones.availability_zones.names[0]}",
+                "name": "${var.vpc_name}-subnet",
+                "cidr": "192.168.100.0/24",
+                "gateway_ip": "192.168.100.1",
+                "vpc_id": "${huaweicloud_vpc.vpc.id}"
+            }
+        },
+        "huaweicloud_networking_secgroup": {
+            "secgroup": {
+                "name": "${var.security_group_name}"
+            }
+        },
+        "huaweicloud_networking_secgroup_rule": {
+            "allow_ping": {
+                "security_group_id": "${huaweicloud_networking_secgroup.secgroup.id}",
+                "description": "Allows to test the ECS connectivity with the ping command.",
+                "direction": "ingress",
+                "ethertype": "IPv4",
+                "protocol": "icmp",
+                "remote_ip_prefix": "0.0.0.0/0"
+            },
+            "allow_ssh_linux": {
+                "security_group_id": "${huaweicloud_networking_secgroup.secgroup.id}",
+                "description": "Allows remote access to Linux ECSs using SSH.",
+                "direction": "ingress",
+                "ethertype": "IPv4",
+                "protocol": "tcp",
+                "ports": 22,
+                "remote_ip_prefix": "192.168.100.0/24"
+            },
+            "allow_database_service": {
+                "security_group_id": "${huaweicloud_networking_secgroup.secgroup.id}",
+                "description": "Allows IP addresses to access the database through port 3306.",
+                "direction": "ingress",
+                "ethertype": "IPv4",
+                "protocol": "tcp",
+                "ports": 3306,
+                "remote_ip_prefix": "192.168.100.0/24"
+            }
+        },
+        "huaweicloud_vpc_eip": {
+            "eip": {
+                "count": 3,
+                "name": "${var.vpc_name}-eip",
+                "bandwidth": {
+                    "name": "${var.vpc_name}-bandwidth",
+                    "share_type": "PER",
+                    "size": "${var.bandwidth_size}",
+                    "charge_mode": "bandwidth"
+                },
+                "publicip": {
+                    "type": "5_bgp"
+                },
+                "charging_mode": "${var.charge_mode}",
+                "period_unit": "${var.charge_period_unit}",
+                "period": "${var.charge_period}"
+            }
+        },
+        "huaweicloud_networking_vip": {
+            "vip": {
+                "name": "${var.vpc_name}-vip",
+                "network_id": "${huaweicloud_vpc_subnet.subnet.id}"
+            }
+        },
+        "huaweicloud_compute_instance": {
+            "mysql_master": {
+                "name": "${var.ecs_name}-master",
+                "availability_zone": "${data.huaweicloud_availability_zones.availability_zones.names[0]}",
+                "image_id": "${data.huaweicloud_images_image.centos.id}",
+                "flavor_id": "${var.ecs_flavor}",
+                "security_group_ids": [
+                    "${huaweicloud_networking_secgroup.secgroup.id}"
+                ],
+                "system_disk_type": "SAS",
+                "system_disk_size": "${var.system_disk_size}",
+                "data_disks": {
+                    "type": "GPSSD",
+                    "size": "${var.data_disk_size}"
+                },
+                "admin_pass": "${var.ecs_password}",
+                "delete_disks_on_termination": true,
+                "network": {
+                    "uuid": "${huaweicloud_vpc_subnet.subnet.id}",
+                    "fixed_ip_v4": "192.168.100.111",
+                    "source_dest_check": false
+                },
+                "eip_id": "${huaweicloud_vpc_eip.eip[0].id}",
+                "charging_mode": "${var.charge_mode}",
+                "period_unit": "${var.charge_period_unit}",
+                "period": "${var.charge_period}",
+                "user_data": "#!/bin/bash\necho 'root:${var.ecs_password}' | chpasswd\nwget -P /tmp/ https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/deploy-a-highly-available-mha-mysql-cluster/userdata/initialize-master.sh\nchmod 755 /tmp/initialize-master.sh\nsudo sh /tmp/initialize-master.sh ${var.ecs_password} ${huaweicloud_networking_vip.vip.ip_address} > /tmp/initialize-master.log\nrm -rf /tmp/initialize-master.sh"
+            },
+            "mysql_slave1": {
+                "depends_on": [
+                    "huaweicloud_compute_instance.mysql_master"
+                ],
+                "name": "${var.ecs_name}-slave1",
+                "availability_zone": "${data.huaweicloud_availability_zones.availability_zones.names[1]}",
+                "image_id": "${data.huaweicloud_images_image.centos.id}",
+                "flavor_id": "${var.ecs_flavor}",
+                "security_group_ids": [
+                    "${huaweicloud_networking_secgroup.secgroup.id}"
+                ],
+                "system_disk_type": "SAS",
+                "system_disk_size": "${var.system_disk_size}",
+                "data_disks": {
+                    "type": "GPSSD",
+                    "size": "${var.data_disk_size}"
+                },
+                "admin_pass": "${var.ecs_password}",
+                "delete_disks_on_termination": true,
+                "network": {
+                    "uuid": "${huaweicloud_vpc_subnet.subnet.id}",
+                    "fixed_ip_v4": "192.168.100.112",
+                    "source_dest_check": false
+                },
+                "eip_id": "${huaweicloud_vpc_eip.eip[1].id}",
+                "charging_mode": "${var.charge_mode}",
+                "period_unit": "${var.charge_period_unit}",
+                "period": "${var.charge_period}",
+                "user_data": "#!/bin/bash\necho 'root:${var.ecs_password}' | chpasswd\nwget -P /tmp/ https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/deploy-a-highly-available-mha-mysql-cluster/userdata/initialize-slave1.sh\nchmod 755 /tmp/initialize-slave1.sh\nsudo sh /tmp/initialize-slave1.sh ${var.ecs_password} > /tmp/initialize-slave1.log\nrm -rf /tmp/initialize-slave1.sh"
+            },
+            "mysql_slave2": {
+                "depends_on": [
+                    "huaweicloud_compute_instance.mysql_slave1"
+                ],
+                "name": "${var.ecs_name}-slave2",
+                "availability_zone": "${data.huaweicloud_availability_zones.availability_zones.names[2]}",
+                "image_id": "${data.huaweicloud_images_image.centos.id}",
+                "flavor_id": "${var.ecs_flavor}",
+                "security_group_ids": [
+                    "${huaweicloud_networking_secgroup.secgroup.id}"
+                ],
+                "system_disk_type": "SAS",
+                "system_disk_size": "${var.system_disk_size}",
+                "data_disks": {
+                    "type": "GPSSD",
+                    "size": "${var.data_disk_size}"
+                },
+                "admin_pass": "${var.ecs_password}",
+                "delete_disks_on_termination": true,
+                "network": {
+                    "uuid": "${huaweicloud_vpc_subnet.subnet.id}",
+                    "fixed_ip_v4": "192.168.100.113",
+                    "source_dest_check": false
+                },
+                "eip_id": "${huaweicloud_vpc_eip.eip[2].id}",
+                "charging_mode": "${var.charge_mode}",
+                "period_unit": "${var.charge_period_unit}",
+                "period": "${var.charge_period}",
+                "user_data": "#!/bin/bash\necho 'root:${var.ecs_password}' | chpasswd\nwget -P /tmp/ https://documentation-samples-4.obs.ap-southeast-3.myhuaweicloud.com/solution-as-code-moudle/deploy-a-highly-available-mha-mysql-cluster/userdata/initialize-slave2.sh\nchmod 755 /tmp/initialize-slave2.sh\nsudo sh /tmp/initialize-slave2.sh ${var.ecs_password} ${var.sender_email_address} ${var.email_authorization_code} ${var.recipient_email_address} ${huaweicloud_networking_vip.vip.ip_address} ${var.ecs_name} ${var.smtp_server_address} > /tmp/initialize-slave2.log\nrm -rf /tmp/initialize-slave2.sh"
+            }
+        },
+        "huaweicloud_compute_servergroup": {
+            "severgroup": {
+                "depends_on": [
+                    "huaweicloud_compute_instance.mysql_slave2"
+                ],
+                "name": "${var.vpc_name}-sg",
+                "policies": [
+                    "anti-affinity"
+                ],
+                "members": [
+                    "${huaweicloud_compute_instance.mysql_master.id}",
+                    "${huaweicloud_compute_instance.mysql_slave1.id}",
+                    "${huaweicloud_compute_instance.mysql_slave2.id}"
+                ]
+            }
+        }
+    },
+    "output": {
+        "Note": {
+            "depends_on": [
+                "huaweicloud_networking_vip.vip"
+            ],
+            "value": "It takes about 15 minutes to complete the environment initialization. The private IP addresses of the primary database, standby database slave1, and standby database slave2 (where MHA Manager is installed) are 192.168.100.111, 192.168.100.112, and 192.168.100.113, respectively. By default, port 3306 is enabled for accessing MySQL. The virtual IP address is ${huaweicloud_networking_vip.vip.ip_address}. "
+        }
+    }
+}
